@@ -19,7 +19,7 @@ describe('Auth Store', () => {
 
   it('should set auth token and user', () => {
     const token = 'test-token';
-    const user = { id: 'user-id', username: 'testuser' };
+    const user = { id: 'user-id', displayName: 'testuser' };
     
     useAuthStore.getState().setAuth(token, user);
     
@@ -30,7 +30,7 @@ describe('Auth Store', () => {
 
   it('should clear auth token and user', () => {
     const token = 'test-token';
-    const user = { id: 'user-id', username: 'testuser' };
+    const user = { id: 'user-id', displayName: 'testuser' };
     
     useAuthStore.getState().setAuth(token, user);
     useAuthStore.getState().clearAuth();

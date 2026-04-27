@@ -11,7 +11,7 @@ interface MessageListProps {
 export const MessageList = ({ chatId }: MessageListProps) => {
   const { ref, inView } = useInView();
   const bottomRef = useRef<HTMLDivElement>(null);
-  const currentUser = useAuthStore((state) => state.user);
+  const currentUser = useAuthStore((state: any) => state.user);
 
   const {
     data,
