@@ -21,7 +21,7 @@ export const ChatList = ({ onSelectChat, selectedChatId }: ChatListProps) => {
     queryKey: ['chats'],
     queryFn: getChats,
     initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
+    getNextPageParam: (lastPage) => lastPage.meta?.nextCursor || undefined,
   });
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export const ChatList = ({ onSelectChat, selectedChatId }: ChatListProps) => {
   if (status === 'pending') return <div className="p-4 text-center text-gray-500">Cargando chats...</div>;
   if (status === 'error') return <div className="p-4 text-center text-red-500">Error al cargar chats</div>;
 
-  const chats = data.pages.flatMap((page) => page.items);
+  const chats = data.pages.flatMap((page) => page.data || []);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto border-r border-gray-200 bg-white">

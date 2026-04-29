@@ -41,16 +41,6 @@ export const RegisterForm = () => {
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700">Email</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border"
-          required
-        />
-      </div>
-      <div>
         <label className="block text-sm font-medium text-gray-700">Contraseña</label>
         <input
           type="password"
@@ -58,7 +48,25 @@ export const RegisterForm = () => {
           onChange={(e) => setPassword(e.target.value)}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border"
           required
+          minLength={8}
         />
+        <p className="mt-1 text-xs text-gray-500">
+          La contraseña debe tener al menos 8 caracteres, una mayúscula y un carácter especial.
+        </p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Contraseña</label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          minLength={8}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border"
+          required
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          La contraseña debe tener al menos 8 caracteres, una mayúscula y un carácter especial.
+        </p>
       </div>
       <button
         type="submit"

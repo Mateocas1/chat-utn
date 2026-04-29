@@ -23,7 +23,7 @@ export const MessageList = ({ chatId }: MessageListProps) => {
     queryKey: ['messages', chatId],
     queryFn: ({ pageParam }) => getMessages({ chatId, pageParam }),
     initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor || undefined,
+    getNextPageParam: (lastPage) => lastPage.meta?.nextCursor || undefined,
     enabled: !!chatId,
   });
 
@@ -44,7 +44,7 @@ export const MessageList = ({ chatId }: MessageListProps) => {
   if (status === 'error') return <div className="flex-1 flex items-center justify-center text-red-500">Error al cargar mensajes</div>;
 
   // Flatten and reverse to show newest at bottom
-  const messages = data.pages.flatMap((page) => page.items).reverse();
+  const messages = data.pages.flatMap((page) => page.data || []).reverse();
 
   return (
     <div className="flex-1 overflow-y-auto p-4 bg-gray-50 flex flex-col">
