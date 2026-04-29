@@ -11,8 +11,3 @@ export const sendMessage = async ({ chatId, content }: { chatId: string; content
   const response = await apiClient.post('/messages', { chatId, content });
   return response.data;
 };
-
-export const sendMessage = async ({ chatId, content }: { chatId: string; content: string }) => {
-  const response = await apiClient.post('/messages', { chatId, content });
-  return response.data.data;
-};

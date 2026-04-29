@@ -11,8 +11,3 @@ export const createChat = async (participantIds: string[]) => {
   const response = await apiClient.post('/chats', { participantIds });
   return response.data;
 };
-
-export const createChat = async (participantIds: string[]) => {
-  const response = await apiClient.post('/chats', { participantIds });
-  return response.data.data;
-};
