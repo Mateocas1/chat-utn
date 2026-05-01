@@ -1,0 +1,23 @@
+# Task Breakdown: chat-frontend-ui-redesign
+
+## 1. Setup & Foundations
+- [x] Task 1.1: Configure Tailwind v4 Theme Tokens
+- [x] Task 1.2: Set up base UI Components (Presentational)
+
+## 2. Global State & Realtime Wiring
+- [x] Task 2.1: Implement Ephemeral Zustand Store
+- [x] Task 2.2: Refactor Socket Gateway & Event Router
+
+## 3. Core Chat Layout
+- [x] Task 3.1: Build `<ChatLayout>` (Container)
+- [x] Task 3.2: Build `<ChatList>` & `<ChatListItem>` (Presentational)
+- [x] Task 3.3: Build `<ChatThreadHeader>`
+
+## 4. Messaging UI
+- [x] Task 4.1: Build `<MessageList>` & `<MessageBubble>`
+- [x] Task 4.2: Build `<MessageComposer>`
+- [x] Task 4.3: Implement `<TypingIndicator>`
+
+## 5. Polish & Feedback
+- [x] Task 5.1: Implement `<NotificationTray>`
+- [x] Task 5.2: Accessibility & Cleanup

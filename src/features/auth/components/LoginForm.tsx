@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { AxiosError } from 'axios';
 import { login } from '../api/auth';
 import useAuthStore from '../store/authStore';
+
+type ErrorResponse = {
+  message?: string;
+};
 
 export const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -22,8 +27,9 @@ export const LoginForm = () => {
         setAuth(response.data.token, response.data.user);
         navigate('/');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al iniciar sesión');
+    } catch (err) {
+      const axiosError = err as AxiosError<ErrorResponse>;
+      setError(axiosError.response?.data?.message || 'Error al iniciar sesión');
     } finally {
       setLoading(false);
     }

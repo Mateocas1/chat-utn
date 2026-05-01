@@ -1,0 +1,63 @@
+# Proposal: chat-frontend UI Redesign
+
+## Intent
+Premium, distinctive chat UI that *shows* real-time backend features (Socket.IO live updates, typing, notifications) and meets WCAG AA (keyboard + SR).
+
+## Scope
+### In Scope
+- Tailwind v4 design system: CSS-first `@theme` tokens (OKLCH), semantic colors, radii, focus rings, motion tokens.
+- Realtime UX: message streaming, optimistic send, connection/retry state, typing indicator (chat list + active thread), unread/mention badges.
+- Notifications UX: in-app toasts + Web Push permission/subscription flow + settings (quiet hours).
+- Accessibility: landmarks, roving tabindex in chat list, SR-friendly message semantics, `prefers-reduced-motion`.
+
+### Out of Scope
+- Backend contract changes.
+- New sync semantics beyond existing backend.
+
+## Capabilities
+### New Capabilities
+- `ui-design-system`: tokens + component variants.
+- `chat-realtime-ux`: Socket.IO lifecycle + UI states (typing/connectivity/live updates).
+- `notifications-ux`: toast + push permissions/subscriptions + settings.
+- `accessibility-chat-ui`: WCAG AA patterns for list/thread/composer.
+
+### Modified Capabilities
+- None.
+
+## Approach
+Exploration proposed **Inter** + **Violet/Indigo**; both conflict with premium guardrails (Inter + “AI purple” risk). Two enterprise-grade directions (pick one and commit):
+- **Alt A — Industrial Quiet**: Zinc neutrals + single Emerald accent; status-first, no glow.
+- **Alt B — Warm Graphite**: Slate neutrals + Deep Rose accent; editorial hierarchy, tactile controls.
+
+Skill contract:
+- `design-taste-frontend`: strict component boundaries; GPU-safe animations (`transform/opacity`); isolate motion-heavy leaf components.
+- `frontend-design`: one bold cohesive direction; avoid template layouts; intentional asymmetry.
+- `tailwind-design-system`: tokens + CVA variants; semantic utilities; dark mode via v4 patterns.
+
+## Affected Areas
+| Area | Impact | Description |
+|---|---|---|
+| `src/styles/*` | Modified | v4 tokens, dark mode, focus styles |
+| `src/components/ui/*` | New | primitives (Button/Input/Dialog/Toast) |
+| `src/features/chat/*` | Modified | ChatList/Thread/Composer redesign + typing |
+| `src/lib/socket/*` | New/Modified | Socket adapter + reconnect handling |
+| `src/lib/notifications/*` | New | toast + push helpers |
+
+## Risks
+| Risk | L | Mitigation |
+|---|---:|---|
+| Event drift (typing/unread) | Med | Adapter layer + mocked contract fixtures |
+| Push annoyance | Med | Opt-in, granular toggles, quiet hours |
+| Motion harms a11y/perf | Low/Med | Reduced-motion + GPU-safe only |
+
+## Rollback Plan
+Ship behind `uiRedesign` runtime flag. Keep old UI for 1 release; rollback by flag off.
+
+## Dependencies
+Backend event schema + push subscription/VAPID readiness.
+
+## Success Criteria
+- [ ] Typing indicator in list + thread within 200ms of event.
+- [ ] Live updates + reconnect UI (no refresh).
+- [ ] WCAG AA audit passes; full keyboard/SR flows.
+- [ ] Push flow optional and reversible.

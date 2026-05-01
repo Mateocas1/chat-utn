@@ -1,0 +1,72 @@
+## Apply Progress — chat-frontend-ui-redesign (Final Micro-Apply)
+
+### Batch Scope
+- Close blocker: Web Push display path non-functional in service worker
+- Close blocker: Strict TDD evidence missing in apply-progress
+
+### Completed in This Batch
+- [x] Added service-worker push path tests first (RED)
+- [x] Implemented service worker `push` event handling with safe payload parsing and `showNotification(...)` (GREEN)
+- [x] Enforced quiet-hours suppression in actual SW display path using payload `quietHours` + optional `now` timestamp
+- [x] Captured auditable RED-GREEN trace in artifact
+
+### TDD Cycle Evidence (Strict)
+| Task | RED (test first) | GREEN (implementation) | REFACTOR | Evidence |
+|---|---|---|---|---|
+| SW push path | Added `src/features/notifications/push/serviceWorker.test.ts` with assertions for JSON payload, text fallback, and quiet-hours suppression before SW change. Initial run failed on quiet-hours suppression case. | Updated `public/service-worker.js` to parse payload safely, compute quiet-hours window, and call `event.waitUntil(self.registration.showNotification(...))` only when allowed. Re-ran suite: all passing. | Kept implementation minimal and deterministic; no behavior-expanding refactor. | Failing test observed: `suppresses display during quiet hours from payload` (showNotification called unexpectedly). Then fixed and all tests passed. |
+
+### Quiet-Hours Enforcement Point
+- Enforced in service worker push display path (`public/service-worker.js`, `push` handler) right before `showNotification(...)`.
+- Input contract: payload may include `quietHours: { enabled, start, end }` and optional `now` (for deterministic evaluation/testing). If omitted, notification is displayed.
+
+### Files Changed (This Batch)
+- `public/service-worker.js` — implemented real push display path
+- `src/features/notifications/push/serviceWorker.test.ts` — added TDD tests for SW push behavior
+- `sdd/chat-frontend-ui-redesign/apply-progress` — updated with explicit strict TDD evidence
+
+### Validation Commands
+- `npm run test -- --run` ✅
+- `npx tsc -p tsconfig.json --noEmit` ✅
+- `npm run lint` ✅
+
+### Blocker Status
+- Blocker 1 (Web Push display path): ✅ Resolved
+- Blocker 2 (Strict TDD auditable evidence): ✅ Resolved
+
+---
+
+## Apply Progress — Contract Hardening Micro-Apply
+
+### Batch Scope
+- Clean up verify WARNING #1 by making Web Push quiet-hours payload contract explicit and safer.
+
+### Completed in This Batch
+- [x] Added/updated tests first for explicit contract and fallback behavior in `serviceWorker.test.ts`.
+- [x] Hardened service worker payload handling with explicit quiet-hours contract normalization.
+- [x] Added safe fallback when `quietHours` is absent or malformed (`enabled !== true` or invalid `HH:MM` times): notification displays.
+- [x] Limited `now` usage to quiet-hours deterministic evaluation; default runtime uses current time when contract not active.
+
+### Quiet-Hours Payload Contract (explicit)
+- Push payload may include:
+  - `quietHours: { enabled: true, start: "HH:MM", end: "HH:MM" }`
+  - optional `now: string` (ISO date-time) for deterministic suppression checks
+- Suppression applies only when quiet-hours contract is valid.
+- If `quietHours` is absent/invalid, fallback is **display notification**.
+
+### TDD Cycle Evidence (Strict)
+| Task | RED (test first) | GREEN (implementation) | REFACTOR | Evidence |
+|---|---|---|---|---|
+| Quiet-hours contract hardening | Extended `src/features/notifications/push/serviceWorker.test.ts` with: (1) assert `waitUntil` is not called during suppression, (2) explicit absent-`quietHours` fallback, (3) malformed `quietHours.enabled` fallback. | Updated `public/service-worker.js` to normalize `quietHours`, validate time strings, and gate `now` parsing to contract-active path. | Kept minimal scope, no unrelated refactors. | Full suite, typecheck, lint all pass after implementation. |
+
+### Files Changed (This Batch)
+- `src/features/notifications/push/serviceWorker.test.ts`
+- `public/service-worker.js`
+- `sdd/chat-frontend-ui-redesign/apply-progress`
+
+### Validation Commands
+- `npm run test -- --run` ✅ (33 files, 136 tests passed)
+- `npx tsc -p tsconfig.json --noEmit` ✅
+- `npm run lint` ✅
+
+### Residual Warnings
+- Archive context still depends on proposal/spec/design and verify artifacts being stored in Engram rather than filesystem.

@@ -1,68 +1,99 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { getChats } from '../api/chats';
-import { useEffect } from 'react';
-import { useInView } from 'react-intersection-observer';
+import { useMemo, useState, type KeyboardEvent } from 'react';
+import { ChatListItem, type ChatListItemData } from './ChatListItem';
 
 interface ChatListProps {
+  chats?: ChatListItemData[];
   onSelectChat: (chatId: string) => void;
   selectedChatId: string | null;
 }
 
-export const ChatList = ({ onSelectChat, selectedChatId }: ChatListProps) => {
-  const { ref, inView } = useInView();
+export type { ChatListItemData } from './ChatListItem';
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    status,
-  } = useInfiniteQuery({
-    queryKey: ['chats'],
-    queryFn: getChats,
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.meta?.nextCursor || undefined,
-  });
-
-  useEffect(() => {
-    if (inView && hasNextPage) {
-      fetchNextPage();
+export const ChatList = ({ chats = [], onSelectChat, selectedChatId }: ChatListProps) => {
+  const initialIndex = useMemo(() => {
+    if (chats.length === 0) {
+      return -1;
     }
-  }, [inView, hasNextPage, fetchNextPage]);
 
-  if (status === 'pending') return <div className="p-4 text-center text-gray-500">Cargando chats...</div>;
-  if (status === 'error') return <div className="p-4 text-center text-red-500">Error al cargar chats</div>;
+    const selectedIndex = selectedChatId ? chats.findIndex((chat) => chat.id === selectedChatId) : -1;
+    return selectedIndex >= 0 ? selectedIndex : 0;
+  }, [chats, selectedChatId]);
 
-  const chats = data.pages.flatMap((page) => page.data || []);
+  const [focusIndex, setFocusIndex] = useState(initialIndex);
+  const resolvedFocusIndex = focusIndex >= 0 && focusIndex < chats.length ? focusIndex : initialIndex;
+
+  const moveFocus = (nextIndex: number) => {
+    if (chats.length === 0) {
+      return;
+    }
+
+    const total = chats.length;
+    const normalized = ((nextIndex % total) + total) % total;
+    setFocusIndex(normalized);
+
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const nextButton = document.getElementById(`chat-list-item-${chats[normalized].id}`);
+    nextButton?.focus();
+  };
+
+  const handleItemKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      moveFocus(index + 1);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      moveFocus(index - 1);
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      moveFocus(0);
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      moveFocus(chats.length - 1);
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onSelectChat(chats[index].id);
+    }
+  };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto border-r border-gray-200 bg-white">
-      <div className="p-4 border-b border-gray-200 bg-gray-50 font-semibold text-gray-700">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden border-border bg-panel md:border-r">
+      <header className="border-border border-b px-4 py-3">
+        <h2 className="text-sm font-semibold text-text">
         Mis Chats
-      </div>
+        </h2>
+      </header>
       {chats.length === 0 ? (
-        <div className="p-4 text-center text-gray-500">No tienes chats aún</div>
+        <div className="px-4 py-6 text-center text-sm text-muted">No hay chats disponibles</div>
       ) : (
-        chats.map((chat: any) => (
-          <div
-            key={chat.id}
-            onClick={() => onSelectChat(chat.id)}
-            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-              selectedChatId === chat.id ? 'bg-primary-50 border-l-4 border-l-primary-500' : ''
-            }`}
-          >
-            <div className="font-medium text-gray-900 truncate">
-              {chat.participants.join(', ')}
-            </div>
-            <div className="text-sm text-gray-500 truncate mt-1">
-              {chat.latestMessagePreview || 'Sin mensajes'}
-            </div>
-          </div>
-        ))
+        <ul className="min-h-0 flex-1 overflow-y-auto">
+          {chats.map((chat, index) => (
+            <ChatListItem
+              key={chat.id}
+              item={chat}
+              selected={selectedChatId === chat.id}
+              tabIndex={index === resolvedFocusIndex ? 0 : -1}
+              onFocus={() => setFocusIndex(index)}
+              onKeyDown={(event) => handleItemKeyDown(event, index)}
+              onClick={onSelectChat}
+            />
+          ))}
+        </ul>
       )}
-      <div ref={ref} className="p-4 text-center text-sm text-gray-400">
-        {isFetchingNextPage ? 'Cargando más...' : hasNextPage ? 'Cargar más' : 'No hay más chats'}
-      </div>
-    </div>
+    </section>
   );
 };

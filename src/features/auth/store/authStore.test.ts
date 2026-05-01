@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('zustand/middleware', () => ({
-  persist: (config: any) => config,
+  persist: (config: unknown) => config,
+  createJSONStorage: () => undefined
 }));
 
 import useAuthStore from './authStore';

@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { AxiosError } from 'axios';
 import { register } from '../api/auth';
+
+type ErrorResponse = {
+  message?: string;
+};
 
 export const RegisterForm = () => {
   const [email, setEmail] = useState('');
@@ -20,8 +25,9 @@ export const RegisterForm = () => {
       if (response.success) {
         navigate('/login');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al registrarse');
+    } catch (err) {
+      const axiosError = err as AxiosError<ErrorResponse>;
+      setError(axiosError.response?.data?.message || 'Error al registrarse');
     } finally {
       setLoading(false);
     }

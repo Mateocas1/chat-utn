@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import type { InternalAxiosRequestConfig, AxiosRequestHeaders } from 'axios';
 import useAuthStore from '../features/auth/store/authStore';
 import apiClient from './axios';
 
@@ -18,6 +19,18 @@ vi.mock('../features/auth/store/authStore', () => ({
 }));
 
 describe('Axios interceptors', () => {
+  const getRequestInterceptor = () => {
+    return (apiClient.interceptors.request as unknown as {
+      handlers: Array<{ fulfilled: (config: InternalAxiosRequestConfig) => Promise<InternalAxiosRequestConfig> }>;
+    }).handlers[0].fulfilled;
+  };
+
+  const getResponseErrorInterceptor = () => {
+    return (apiClient.interceptors.response as unknown as {
+      handlers: Array<{ rejected: (error: unknown) => Promise<never> }>;
+    }).handlers[0].rejected;
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -25,7 +38,7 @@ describe('Axios interceptors', () => {
   describe('Request interceptor', () => {
     it('should add Authorization header when token exists', async () => {
       const token = 'test-token';
-      const config = { headers: {} as any };
+      const config = { headers: {} as AxiosRequestHeaders } as InternalAxiosRequestConfig;
       
       vi.mocked(useAuthStore.getState).mockReturnValue({
         token,
@@ -35,14 +48,14 @@ describe('Axios interceptors', () => {
       });
 
       // Access the interceptor from the real axios instance
-      const requestInterceptor = (apiClient.interceptors.request as any).handlers[0].fulfilled;
+      const requestInterceptor = getRequestInterceptor();
       const result = await requestInterceptor(config);
 
       expect(result.headers.Authorization).toBe(`Bearer ${token}`);
     });
 
     it('should not add Authorization header when token is null', async () => {
-      const config = { headers: {} as any };
+      const config = { headers: {} as AxiosRequestHeaders } as InternalAxiosRequestConfig;
       
       vi.mocked(useAuthStore.getState).mockReturnValue({
         token: null,
@@ -51,14 +64,14 @@ describe('Axios interceptors', () => {
         clearAuth: vi.fn(),
       });
 
-      const requestInterceptor = (apiClient.interceptors.request as any).handlers[0].fulfilled;
+      const requestInterceptor = getRequestInterceptor();
       const result = await requestInterceptor(config);
 
       expect(result.headers.Authorization).toBeUndefined();
     });
 
     it('should add Idempotency-Key header for POST requests', async () => {
-      const config = { method: 'POST', headers: {} as any };
+      const config = { method: 'POST', headers: {} as AxiosRequestHeaders } as InternalAxiosRequestConfig;
       
       vi.mocked(useAuthStore.getState).mockReturnValue({
         token: null,
@@ -67,7 +80,7 @@ describe('Axios interceptors', () => {
         clearAuth: vi.fn(),
       });
 
-      const requestInterceptor = (apiClient.interceptors.request as any).handlers[0].fulfilled;
+      const requestInterceptor = getRequestInterceptor();
       const result = await requestInterceptor(config);
 
       expect(result.headers['Idempotency-Key']).toBe('uuid-value');
@@ -86,7 +99,7 @@ describe('Axios interceptors', () => {
         clearAuth: clearAuthMock,
       });
 
-      const responseErrorInterceptor = (apiClient.interceptors.response as any).handlers[0].rejected;
+      const responseErrorInterceptor = getResponseErrorInterceptor();
       
       await expect(responseErrorInterceptor(error)).rejects.toEqual(error);
       expect(clearAuthMock).toHaveBeenCalled();
