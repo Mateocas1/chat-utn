@@ -48,11 +48,12 @@ export const shouldDeliverPushNotification = (quietHours: QuietHours, now: Date 
   return !isWithinQuietHours(quietHours.start, quietHours.end, now);
 };
 
-const base64ToUint8Array = (base64String: string): Uint8Array => {
+const base64ToArrayBuffer = (base64String: string): ArrayBuffer => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = atob(base64);
-  return Uint8Array.from(rawData, (char) => char.charCodeAt(0));
+  const bytes = Uint8Array.from(rawData, (char) => char.charCodeAt(0));
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 };
 
 const normalizeSubscription = (subscription: PushSubscription | PushSubscriptionPayload): PushSubscriptionPayload => {
@@ -94,7 +95,7 @@ const subscribeFromServiceWorker = async (
 
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
-    applicationServerKey: base64ToUint8Array(vapidPublicKey)
+    applicationServerKey: base64ToArrayBuffer(vapidPublicKey)
   });
 
   return normalizeSubscription(subscription);

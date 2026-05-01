@@ -23,6 +23,12 @@ type MessageListContainerProps = {
   currentUserId?: string;
 };
 
+type RetryMessageVariables = {
+  chatId: string;
+  messageId: string;
+  content: string;
+};
+
 const toMessageListItems = (
   items: MessageResponseItem[] | undefined,
   currentUserId?: string
@@ -48,8 +54,8 @@ export function MessageListContainer({ currentUserId }: MessageListContainerProp
   const queryClient = useQueryClient();
 
   const retryMutation = useMutation({
-    mutationFn: ({ chatId, content }: { chatId: string; content: string }) => sendMessage({ chatId, content }),
-    onMutate: ({ chatId, messageId }: { chatId: string; messageId: string; content: string }) => {
+    mutationFn: ({ chatId, content }: RetryMessageVariables) => sendMessage({ chatId, content }),
+    onMutate: ({ chatId, messageId }: RetryMessageVariables) => {
       queryClient.setQueryData<CollectionCache<MessageResponseItem> | MessageResponseItem[]>(['messages', chatId], (current) => {
         const items = readCollectionItems(current);
 
@@ -70,7 +76,7 @@ export function MessageListContainer({ currentUserId }: MessageListContainerProp
     },
     onSuccess: (
       response: { id?: string; createdAt?: string },
-      { chatId, messageId }: { chatId: string; messageId: string; content: string }
+      { chatId, messageId }: RetryMessageVariables
     ) => {
       queryClient.setQueryData<CollectionCache<MessageResponseItem> | MessageResponseItem[]>(['messages', chatId], (current) => {
         const items = readCollectionItems(current);
@@ -91,7 +97,7 @@ export function MessageListContainer({ currentUserId }: MessageListContainerProp
         return writeCollectionItems(current, nextItems);
       });
     },
-    onError: (_error, { chatId, messageId }: { chatId: string; messageId: string; content: string }) => {
+    onError: (_error, { chatId, messageId }: RetryMessageVariables) => {
       queryClient.setQueryData<CollectionCache<MessageResponseItem> | MessageResponseItem[]>(['messages', chatId], (current) => {
         const items = readCollectionItems(current);
         const nextItems = items.map((item) => {
