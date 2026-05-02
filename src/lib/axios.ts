@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import useAuthStore from '../features/auth/store/authStore';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
 });
 
 // Request interceptor for JWT injection and Idempotency-Key generation

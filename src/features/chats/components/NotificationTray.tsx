@@ -37,7 +37,6 @@ export function NotificationTray({ isVisible, items, onDismiss }: NotificationTr
   return (
     <aside
       aria-label="Notifications"
-      aria-live="polite"
       className="border-border bg-panel/80 text-muted border-b px-4 py-2"
     >
       <ul className="space-y-2" role="list">

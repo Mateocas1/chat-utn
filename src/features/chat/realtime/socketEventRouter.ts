@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
 import queryClient from '@/lib/queryClient';
-import { useChatUIStore, type ChatToast } from '@/features/chat/store/chatUIStore';
+import { useChatUIStore } from '@/features/chat/store/chatUIStore';
 import { readCollectionItems, writeCollectionItems, type CollectionCache } from '@/features/chat/realtime/cacheContracts';
 import { shouldDeliverPushNotification } from '@/features/notifications/push/pushNotifications';
 
@@ -21,18 +21,15 @@ export interface ChatPreview {
 export interface TypingEventPayload {
   chatId: string;
   userId: string;
-  userName: string;
-  isTyping: boolean;
 }
 
 export interface NotificationEventPayload {
   id: string;
+  title: string;
   message: string;
-  variant: ChatToast['variant'];
+  read: boolean;
   createdAt: string;
-  mode: 'append' | 'prepend';
-  chatId?: string;
-  kind?: 'message' | 'mention' | 'system';
+  metadata?: Record<string, unknown>;
 }
 
 export type SocketEvent =
@@ -49,7 +46,7 @@ type ChatUIStoreWrite = Pick<
 
 interface CreateSocketEventRouterOptions {
   queryClient: QueryClientWrite;
-  chatUIStore: ChatUIStoreWrite;
+  getChatUIState: () => ChatUIStoreWrite;
 }
 
 export const CHATS_QUERY_KEY = ['chats'] as const;
@@ -90,19 +87,17 @@ const patchNotifications = (
   incoming: NotificationEventPayload
 ): CollectionCache<NotificationEventPayload> => {
   const safeCurrent = readCollectionItems(current);
-
-  if (incoming.mode === 'prepend') {
-    return writeCollectionItems(current, [incoming, ...safeCurrent]);
-  }
-
-  return writeCollectionItems(current, [...safeCurrent, incoming]);
+  const deduplicated = safeCurrent.filter((notification) => notification.id !== incoming.id);
+  return writeCollectionItems(current, [incoming, ...deduplicated]);
 };
 
 export const createSocketEventRouter = ({
   queryClient: queryClientWrite,
-  chatUIStore
+  getChatUIState
 }: CreateSocketEventRouterOptions) => {
   const handleEvent = (event: SocketEvent) => {
+    const chatUIStore = getChatUIState();
+
     if (event.type === 'message') {
       const message = event.payload;
 
@@ -119,11 +114,7 @@ export const createSocketEventRouter = ({
 
     if (event.type === 'typing') {
       const typingPayload = event.payload;
-      if (typingPayload.isTyping) {
-        chatUIStore.setUserTyping(typingPayload.chatId, typingPayload.userId, typingPayload.userName);
-      } else {
-        chatUIStore.clearUserTyping(typingPayload.chatId, typingPayload.userId);
-      }
+      chatUIStore.setUserTyping(typingPayload.chatId, typingPayload.userId, typingPayload.userId);
       return;
     }
 
@@ -133,14 +124,16 @@ export const createSocketEventRouter = ({
       patchNotifications(current, notification)
     );
 
-    const threadPushEnabled = notification.chatId ? (chatUIStore.threadPushEnabled[notification.chatId] ?? true) : true;
+    const metadata = notification.metadata as { chatId?: string } | undefined;
+    const chatId = metadata?.chatId;
+    const threadPushEnabled = chatId ? (chatUIStore.threadPushEnabled[chatId] ?? true) : true;
     const quietHoursAllowsToast = shouldDeliverPushNotification(chatUIStore.quietHours, event.now ?? new Date(notification.createdAt));
 
     if (threadPushEnabled && quietHoursAllowsToast) {
       chatUIStore.enqueueToast({
         id: notification.id,
         message: notification.message,
-        variant: notification.variant
+        variant: 'info'
       });
     }
   };
@@ -152,5 +145,5 @@ export const createSocketEventRouter = ({
 
 export const socketEventRouter = createSocketEventRouter({
   queryClient,
-  chatUIStore: useChatUIStore.getState()
+  getChatUIState: useChatUIStore.getState
 });

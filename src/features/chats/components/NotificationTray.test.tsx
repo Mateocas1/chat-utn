@@ -59,6 +59,33 @@ describe('NotificationTray', () => {
     expect(onDismiss).toHaveBeenCalledWith('n1');
   });
 
+  it('renders toasts with alert and status roles by variant', () => {
+    render(
+      <NotificationTray
+        isVisible
+        items={[
+          { id: 'n1', title: 'Connection unstable', message: 'Realtime delayed', variant: 'status' },
+          { id: 'n2', title: 'Message failed', message: 'Retry from composer', variant: 'error' },
+        ]}
+      />
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('Connection unstable');
+    expect(screen.getByRole('alert')).toHaveTextContent('Message failed');
+  });
+
+  it('renders dismiss button as keyboard reachable control', () => {
+    render(<NotificationTray isVisible items={[baseItems[0]]} onDismiss={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Dismiss Connection unstable' })).toBeInTheDocument();
+  });
+
+  it('does not expose a live region on the tray container', () => {
+    render(<NotificationTray isVisible items={[baseItems[0]]} />);
+
+    expect(screen.getByLabelText('Notifications')).not.toHaveAttribute('aria-live');
+  });
+
   it('uses subtle status-first industrial quiet treatment', () => {
     render(<NotificationTray isVisible items={[baseItems[0]]} />);
 

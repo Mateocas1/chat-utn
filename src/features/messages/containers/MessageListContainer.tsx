@@ -1,23 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MessageList, type MessageListItemData } from '@/features/messages/components/MessageList';
 import { getMessages, sendMessage } from '@/features/messages/api/messages';
+import type { MessageDto, MessagesResponse, SendMessageResponse } from '@/features/messages/api/messages';
 import { useChatUIStore } from '@/features/chat/store/chatUIStore';
 import { readCollectionItems, writeCollectionItems, type CollectionCache } from '@/features/chat/realtime/cacheContracts';
-
-type MessageResponseItem = {
-  id: string;
-  chatId: string;
-  content: string;
-  senderId: string;
-  senderName?: string;
-  createdAt: string;
-  status?: 'pending' | 'delivered' | 'failed';
-  retryable?: boolean;
-};
-
-type MessagesResponse = {
-  items?: MessageResponseItem[];
-};
 
 type MessageListContainerProps = {
   currentUserId?: string;
@@ -30,7 +16,7 @@ type RetryMessageVariables = {
 };
 
 const toMessageListItems = (
-  items: MessageResponseItem[] | undefined,
+  items: MessageDto[] | undefined,
   currentUserId?: string
 ): MessageListItemData[] => {
   if (!items) {
@@ -56,7 +42,7 @@ export function MessageListContainer({ currentUserId }: MessageListContainerProp
   const retryMutation = useMutation({
     mutationFn: ({ chatId, content }: RetryMessageVariables) => sendMessage({ chatId, content }),
     onMutate: ({ chatId, messageId }: RetryMessageVariables) => {
-      queryClient.setQueryData<CollectionCache<MessageResponseItem> | MessageResponseItem[]>(['messages', chatId], (current) => {
+      queryClient.setQueryData<CollectionCache<MessageDto> | MessageDto[]>(['messages', chatId], (current) => {
         const items = readCollectionItems(current);
 
         const nextItems = items.map((item) => {
@@ -75,10 +61,10 @@ export function MessageListContainer({ currentUserId }: MessageListContainerProp
       });
     },
     onSuccess: (
-      response: { id?: string; createdAt?: string },
+      response: SendMessageResponse,
       { chatId, messageId }: RetryMessageVariables
     ) => {
-      queryClient.setQueryData<CollectionCache<MessageResponseItem> | MessageResponseItem[]>(['messages', chatId], (current) => {
+      queryClient.setQueryData<CollectionCache<MessageDto> | MessageDto[]>(['messages', chatId], (current) => {
         const items = readCollectionItems(current);
         const nextItems = items.map((item) => {
           if (item.id !== messageId) {
@@ -98,7 +84,7 @@ export function MessageListContainer({ currentUserId }: MessageListContainerProp
       });
     },
     onError: (_error, { chatId, messageId }: RetryMessageVariables) => {
-      queryClient.setQueryData<CollectionCache<MessageResponseItem> | MessageResponseItem[]>(['messages', chatId], (current) => {
+      queryClient.setQueryData<CollectionCache<MessageDto> | MessageDto[]>(['messages', chatId], (current) => {
         const items = readCollectionItems(current);
         const nextItems = items.map((item) => {
           if (item.id !== messageId) {
@@ -135,13 +121,13 @@ export function MessageListContainer({ currentUserId }: MessageListContainerProp
     return <MessageList messages={[]} emptyStateLabel="No pudimos cargar los mensajes" />;
   }
 
-  const messages = toMessageListItems(data?.items, currentUserId);
+  const messages = toMessageListItems(data?.data, currentUserId);
   const handleRetry = (messageId: string) => {
     if (!selectedChatId || retryMutation.isPending) {
       return;
     }
 
-    const targetMessage = data?.items?.find((item) => item.id === messageId);
+    const targetMessage = data?.data?.find((item) => item.id === messageId);
     if (!targetMessage || !targetMessage.retryable) {
       return;
     }

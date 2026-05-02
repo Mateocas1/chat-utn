@@ -34,7 +34,7 @@ describe('ChatListItem', () => {
       />,
     );
 
-    expect(screen.getByLabelText('Mensajes no leidos')).toHaveTextContent('3');
+    expect(screen.getByLabelText('3 unread messages')).toHaveTextContent('3');
   });
 
   it('does not show unread indicator when unreadCount is zero', () => {
@@ -46,7 +46,7 @@ describe('ChatListItem', () => {
       />,
     );
 
-    expect(screen.queryByLabelText('Mensajes no leidos')).toBeNull();
+    expect(screen.queryByLabelText('3 unread messages')).toBeNull();
   });
 
   it('applies selected state styling when selected', () => {
@@ -87,7 +87,7 @@ describe('ChatListItem', () => {
       />,
     );
 
-    const typingDot = screen.getByLabelText('chat typing');
+    const typingDot = screen.getByLabelText('typing indicator');
     expect(typingDot.className).toContain('motion-reduce:animate-none');
   });
 });

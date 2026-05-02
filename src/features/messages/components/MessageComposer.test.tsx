@@ -76,4 +76,34 @@ describe('MessageComposer', () => {
 
     expect(onSend).not.toHaveBeenCalled();
   });
+
+  it('shows character counter and announcements when limit is provided', () => {
+    render(
+      <MessageComposer value={'a'.repeat(8)} onChange={vi.fn()} onSend={vi.fn()} charLimit={10} />
+    );
+
+    expect(screen.getByText('2 characters remaining')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('80% of character limit reached');
+  });
+
+  it('announces when the character limit is reached', () => {
+    render(
+      <MessageComposer value={'b'.repeat(10)} onChange={vi.fn()} onSend={vi.fn()} charLimit={10} />
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('Character limit reached');
+  });
+
+  it('does not render a character counter when no limit is provided', () => {
+    render(<MessageComposer value="Hola" onChange={vi.fn()} onSend={vi.fn()} />);
+
+    expect(screen.queryByText(/characters remaining/)).toBeNull();
+  });
+
+  it('prevents manual resize when auto-resize is enabled', () => {
+    render(<MessageComposer value="" onChange={vi.fn()} onSend={vi.fn()} />);
+
+    const textarea = screen.getByLabelText('Message');
+    expect(textarea).not.toHaveClass('resize-y');
+  });
 });

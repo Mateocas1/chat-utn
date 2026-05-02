@@ -7,5 +7,9 @@ type RegisterPushSubscriptionPayload = {
 };
 
 export const registerPushSubscription = async (payload: RegisterPushSubscriptionPayload) => {
+  if (import.meta.env.VITE_PUSH_ENABLED !== 'true') {
+    return;
+  }
+
   await apiClient.post('/notifications/push-subscriptions', payload);
 };

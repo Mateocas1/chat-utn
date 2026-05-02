@@ -45,10 +45,10 @@ export function ChatListItem({ item, selected, tabIndex = -1, onKeyDown, onFocus
         </div>
         <div className="mt-1 flex items-center justify-between gap-3">
           <span className="truncate text-sm text-muted">{item.preview}</span>
-          {item.isTyping ? <span aria-label="chat typing" className="bg-accent inline-block size-2 animate-pulse motion-reduce:animate-none rounded-full" /> : null}
+          {item.isTyping ? <span aria-label="typing indicator" className="bg-accent inline-block size-2 animate-pulse motion-reduce:animate-none rounded-full" /> : null}
           {unreadCount > 0 ? (
             <span
-              aria-label="Mensajes no leidos"
+              aria-label={`${unreadCount} unread messages`}
               className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-ink"
             >
               {unreadCount}

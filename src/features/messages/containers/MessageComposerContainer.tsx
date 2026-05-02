@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageComposer } from '@/features/messages/components/MessageComposer';
-import { sendMessage } from '@/features/messages/api/messages';
+import { sendMessage, sendTypingSignal } from '@/features/messages/api/messages';
+import type { SendMessageResponse } from '@/features/messages/api/messages';
 import { useChatUIStore } from '@/features/chat/store/chatUIStore';
-import { useSocketGateway } from '@/features/chat/realtime/socketGateway';
+import useAuthStore from '@/features/auth/store/authStore';
 
 type MessageItem = {
   id: string;
@@ -28,13 +29,35 @@ const patchMessage = (
 
 export function MessageComposerContainer() {
   const [content, setContent] = useState('');
+  const typingTimeoutRef = useRef<number | null>(null);
+  const lastTypingSentAtRef = useRef<number>(0);
+  const selectedChatIdRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
   const selectedChatId = useChatUIStore((state) => state.selectedChatId);
-  const socketGateway = useSocketGateway();
+  const currentUserId = useAuthStore((state) => state.user?.id ?? null);
+
+  useEffect(() => {
+    selectedChatIdRef.current = selectedChatId;
+  }, [selectedChatId]);
+
+  useEffect(() => {
+    if (typingTimeoutRef.current !== null) {
+      window.clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  }, [selectedChatId]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current !== null) {
+        window.clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const mutation = useMutation({
     mutationFn: sendMessage,
-    onSuccess: (response: { id?: string; createdAt?: string }, variables: { chatId: string; content: string }) => {
+    onSuccess: (response: SendMessageResponse, variables: { chatId: string; content: string }) => {
       const optimisticId = `tmp:${variables.chatId}:${variables.content}`;
 
       queryClient.setQueryData<MessagesCache>(['messages', variables.chatId], (current) =>
@@ -114,14 +137,35 @@ export function MessageComposerContainer() {
   const handleChange = (nextContent: string) => {
     setContent(nextContent);
 
-    if (!selectedChatId) {
+    if (!selectedChatId || !currentUserId) {
       return;
     }
 
-    socketGateway.emitTyping({
-      chatId: selectedChatId,
-      isTyping: nextContent.trim().length > 0
-    });
+    if (nextContent.trim().length === 0) {
+      return;
+    }
+
+    if (typingTimeoutRef.current !== null) {
+      window.clearTimeout(typingTimeoutRef.current);
+    }
+
+    const debounceMs = 400;
+    const throttleMs = 1500;
+    const chatIdAtSchedule = selectedChatId;
+    typingTimeoutRef.current = window.setTimeout(() => {
+      if (selectedChatIdRef.current !== chatIdAtSchedule) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastTypingSentAtRef.current < throttleMs) {
+        return;
+      }
+
+      lastTypingSentAtRef.current = now;
+      void sendTypingSignal({ chatId: chatIdAtSchedule, isTyping: true });
+    }, debounceMs);
+
   };
 
   return (

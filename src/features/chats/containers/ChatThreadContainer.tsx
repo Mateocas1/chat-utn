@@ -1,16 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { ChatThreadHeader } from '@/features/chats/components/ChatThreadHeader';
 import { getChats } from '@/features/chats/api/chats';
+import type { ChatsResponse } from '@/features/chats/api/chats';
 import { useChatUIStore, type SocketStatus } from '@/features/chat/store/chatUIStore';
 
 type ChatThreadResponseItem = {
   id: string;
   title?: string;
   participantCount?: number;
-};
-
-type ChatsResponse = {
-  items?: ChatThreadResponseItem[];
 };
 
 const SOCKET_STATUS_LABELS: Record<SocketStatus, string> = {
@@ -49,7 +46,7 @@ export function ChatThreadContainer() {
     );
   }
 
-  const selectedChat = data?.items?.find((chat) => chat.id === selectedChatId);
+  const selectedChat = data?.find((chat: ChatThreadResponseItem) => chat.id === selectedChatId);
 
   return (
     <ChatThreadHeader

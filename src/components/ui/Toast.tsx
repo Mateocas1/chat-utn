@@ -21,8 +21,15 @@ type ToastProps = VariantProps<typeof toastVariants> & {
 };
 
 export function Toast({ title, description, variant = 'default' }: ToastProps) {
+  const isDanger = variant === 'danger';
+
   return (
-    <article role="status" data-variant={variant} className={toastVariants({ variant })}>
+    <article
+      role={isDanger ? 'alert' : 'status'}
+      aria-live={isDanger ? 'assertive' : 'polite'}
+      data-variant={variant}
+      className={toastVariants({ variant })}
+    >
       <p className="text-xs font-medium">{title}</p>
       {description ? <p className="mt-1 text-xs opacity-90">{description}</p> : null}
     </article>

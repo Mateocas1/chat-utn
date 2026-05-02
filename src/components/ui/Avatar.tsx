@@ -25,12 +25,14 @@ const initialsFromName = (name: string) => {
 };
 
 export function Avatar({ name, src, alt, variant = 'default', className, ...props }: AvatarProps) {
+  const accessibleLabel = `${name} avatar`;
+
   if (src) {
-    return <img src={src} alt={alt ?? `Avatar de ${name}`} className={[avatarVariants({ variant }), className].filter(Boolean).join(' ')} {...props} />;
+    return <img src={src} alt={alt ?? accessibleLabel} className={[avatarVariants({ variant }), className].filter(Boolean).join(' ')} {...props} />;
   }
 
   return (
-    <span aria-label={`Avatar de ${name}`} data-variant={variant} className={[avatarVariants({ variant }), className].filter(Boolean).join(' ')}>
+    <span aria-label={accessibleLabel} data-variant={variant} className={[avatarVariants({ variant }), className].filter(Boolean).join(' ')}>
       {initialsFromName(name)}
     </span>
   );

@@ -4,11 +4,6 @@ import useAuthStore from '@/features/auth/store/authStore';
 import { useChatUIStore, type SocketStatus } from '@/features/chat/store/chatUIStore';
 import { socketEventRouter, type NotificationEventPayload, type TypingEventPayload, type Message } from './socketEventRouter';
 
-type OutboundTypingPayload = {
-  chatId: string;
-  isTyping: boolean;
-};
-
 type IncomingSocketEvent =
   | { type: 'message'; payload: Message }
   | { type: 'typing'; payload: TypingEventPayload }
@@ -48,9 +43,6 @@ export const createSocketGateway = ({ socket, onStatusChange, onEvent }: CreateS
     },
     leaveChat: (chatId: string) => {
       socket.emit('leaveChat', chatId);
-    },
-    emitTyping: (payload: OutboundTypingPayload) => {
-      socket.emit('typing', payload);
     },
     subscribe: bindEvents
   };

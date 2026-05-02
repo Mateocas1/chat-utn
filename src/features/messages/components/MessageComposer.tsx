@@ -1,4 +1,6 @@
-import type { KeyboardEvent } from 'react';
+import { useRef, type KeyboardEvent } from 'react';
+import { useAutoResize } from '../../../hooks/useAutoResize';
+import { CharLimitCounter } from './CharLimitCounter';
 
 interface MessageComposerProps {
   value: string;
@@ -7,6 +9,7 @@ interface MessageComposerProps {
   disabled?: boolean;
   isSubmitting?: boolean;
   placeholder?: string;
+  charLimit?: number;
 }
 
 export function MessageComposer({
@@ -16,7 +19,9 @@ export function MessageComposer({
   disabled = false,
   isSubmitting = false,
   placeholder = 'Write a message…',
+  charLimit,
 }: MessageComposerProps) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const isDisabled = disabled || isSubmitting;
   const canSend = value.trim().length > 0 && !isDisabled;
 
@@ -37,6 +42,8 @@ export function MessageComposer({
     handleSend();
   };
 
+  useAutoResize(textareaRef, value, 160);
+
   return (
     <section className="border-t border-border bg-panel px-4 py-3">
       <label htmlFor="message-composer" className="sr-only">
@@ -52,7 +59,8 @@ export function MessageComposer({
           disabled={isDisabled}
           placeholder={placeholder}
           rows={1}
-          className="min-h-10 max-h-40 flex-1 resize-y rounded-[--radius-sm] border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50"
+          ref={textareaRef}
+          className="min-h-10 max-h-40 flex-1 resize-none rounded-[--radius-sm] border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50"
         />
 
         <button
@@ -65,6 +73,11 @@ export function MessageComposer({
           {isSubmitting ? 'Sending...' : 'Send'}
         </button>
       </div>
+      {typeof charLimit === 'number' ? (
+        <div className="mt-2 flex justify-end">
+          <CharLimitCounter value={value} limit={charLimit} />
+        </div>
+      ) : null}
     </section>
   );
 }

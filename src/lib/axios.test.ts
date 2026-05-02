@@ -19,6 +19,10 @@ vi.mock('../features/auth/store/authStore', () => ({
 }));
 
 describe('Axios interceptors', () => {
+  it('should configure baseURL without /api suffix', () => {
+    expect(apiClient.defaults.baseURL).toBe('http://localhost:3000');
+  });
+
   const getRequestInterceptor = () => {
     return (apiClient.interceptors.request as unknown as {
       handlers: Array<{ fulfilled: (config: InternalAxiosRequestConfig) => Promise<InternalAxiosRequestConfig> }>;

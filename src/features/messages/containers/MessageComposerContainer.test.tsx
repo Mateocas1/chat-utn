@@ -2,17 +2,28 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MessageComposerContainer } from './MessageComposerContainer';
 
+const { sendTypingSignalMock } = vi.hoisted(() => ({
+  sendTypingSignalMock: vi.fn()
+}));
+
 const setQueryDataMock = vi.fn();
 const mutateMock = vi.fn();
 const useMutationMock = vi.fn();
-const emitTypingMock = vi.fn();
 
 type ChatUIState = {
   selectedChatId: string | null;
 };
 
+type AuthState = {
+  user: { id: string; displayName: string } | null;
+};
+
 let chatUIState: ChatUIState = {
   selectedChatId: null
+};
+
+let authState: AuthState = {
+  user: { id: 'user-1', displayName: 'Mica' }
 };
 
 vi.mock('@tanstack/react-query', () => ({
@@ -22,23 +33,30 @@ vi.mock('@tanstack/react-query', () => ({
   useMutation: (options: unknown) => useMutationMock(options)
 }));
 
+vi.mock('@/features/messages/api/messages', async () => {
+  const actual = await vi.importActual<typeof import('@/features/messages/api/messages')>('@/features/messages/api/messages');
+  return {
+    ...actual,
+    sendTypingSignal: sendTypingSignalMock
+  };
+});
+
 vi.mock('@/features/chat/store/chatUIStore', () => ({
   useChatUIStore: (selector: (state: ChatUIState) => unknown) => selector(chatUIState)
 }));
 
-vi.mock('@/features/chat/realtime/socketGateway', () => ({
-  useSocketGateway: () => ({
-    emitTyping: emitTypingMock
-  })
+vi.mock('@/features/auth/store/authStore', () => ({
+  default: (selector: (state: AuthState) => unknown) => selector(authState)
 }));
 
 describe('MessageComposerContainer', () => {
   beforeEach(() => {
     chatUIState = { selectedChatId: null };
+    authState = { user: { id: 'user-1', displayName: 'Mica' } };
     setQueryDataMock.mockReset();
     mutateMock.mockReset();
     useMutationMock.mockReset();
-    emitTypingMock.mockReset();
+    sendTypingSignalMock.mockReset();
 
     useMutationMock.mockReturnValue({
       mutate: mutateMock,
@@ -145,13 +163,105 @@ describe('MessageComposerContainer', () => {
     });
   });
 
-  it('emits typing event when user writes with selected chat', () => {
+  it('sends typing signal over HTTP when user writes with selected chat', async () => {
+    vi.useFakeTimers();
     chatUIState.selectedChatId = 'chat-typing';
+    sendTypingSignalMock.mockResolvedValue({ ok: true });
 
     render(<MessageComposerContainer />);
 
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'h' } });
+    await vi.runAllTimersAsync();
 
-    expect(emitTypingMock).toHaveBeenCalledWith({ chatId: 'chat-typing', isTyping: true });
+    expect(sendTypingSignalMock).toHaveBeenCalledWith({ chatId: 'chat-typing', isTyping: true });
+    vi.useRealTimers();
+  });
+
+  it('does not send typing signal when content is blank', async () => {
+    vi.useFakeTimers();
+    chatUIState.selectedChatId = 'chat-typing';
+
+    render(<MessageComposerContainer />);
+
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: '   ' } });
+    await vi.runAllTimersAsync();
+
+    expect(sendTypingSignalMock).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('debounces typing signal across fast consecutive changes', async () => {
+    vi.useFakeTimers();
+    chatUIState.selectedChatId = 'chat-typing';
+    sendTypingSignalMock.mockResolvedValue({ ok: true });
+
+    render(<MessageComposerContainer />);
+
+    const input = screen.getByLabelText('Message');
+    fireEvent.change(input, { target: { value: 'h' } });
+    fireEvent.change(input, { target: { value: 'ho' } });
+    fireEvent.change(input, { target: { value: 'hol' } });
+
+    await vi.advanceTimersByTimeAsync(399);
+    expect(sendTypingSignalMock).toHaveBeenCalledTimes(0);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(sendTypingSignalMock).toHaveBeenCalledTimes(1);
+    expect(sendTypingSignalMock).toHaveBeenLastCalledWith({ chatId: 'chat-typing', isTyping: true });
+    vi.useRealTimers();
+  });
+
+  it('throttles typing signal and allows next call after cooldown', async () => {
+    vi.useFakeTimers();
+    chatUIState.selectedChatId = 'chat-typing';
+    sendTypingSignalMock.mockResolvedValue({ ok: true });
+
+    render(<MessageComposerContainer />);
+
+    const input = screen.getByLabelText('Message');
+    fireEvent.change(input, { target: { value: 'h' } });
+    await vi.advanceTimersByTimeAsync(400);
+    expect(sendTypingSignalMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(input, { target: { value: 'ho' } });
+    await vi.advanceTimersByTimeAsync(400);
+    expect(sendTypingSignalMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1200);
+    fireEvent.change(input, { target: { value: 'hola' } });
+    await vi.advanceTimersByTimeAsync(400);
+    expect(sendTypingSignalMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it('does not send typing signal when user is not authenticated', async () => {
+    vi.useFakeTimers();
+    chatUIState.selectedChatId = 'chat-typing';
+    authState = { user: null };
+
+    render(<MessageComposerContainer />);
+
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'hola' } });
+    await vi.runAllTimersAsync();
+
+    expect(sendTypingSignalMock).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('cancels pending typing signal when selected chat changes before debounce', async () => {
+    vi.useFakeTimers();
+    chatUIState.selectedChatId = 'chat-a';
+
+    const { rerender } = render(<MessageComposerContainer />);
+
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'hola' } });
+
+    chatUIState.selectedChatId = 'chat-b';
+    rerender(<MessageComposerContainer />);
+
+    await vi.runAllTimersAsync();
+
+    expect(sendTypingSignalMock).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });

@@ -42,7 +42,7 @@ describe('MessageListContainer', () => {
   });
 
   it('does not fetch messages until a chat is selected', () => {
-    useQueryMock.mockReturnValue({ data: { items: [] } });
+    useQueryMock.mockReturnValue({ data: { data: [] } });
 
     render(<MessageListContainer />);
 
@@ -55,7 +55,7 @@ describe('MessageListContainer', () => {
     chatUIState.selectedChatId = 'chat-1';
     useQueryMock.mockReturnValue({
       data: {
-        items: [
+        data: [
           {
             id: 'm-1',
             chatId: 'chat-1',
@@ -86,7 +86,7 @@ describe('MessageListContainer', () => {
     chatUIState.selectedChatId = 'chat-1';
     useQueryMock.mockReturnValue({
       data: {
-        items: [
+        data: [
           {
             id: 'm-1',
             chatId: 'chat-1',
@@ -124,7 +124,7 @@ describe('MessageListContainer', () => {
 
   it('renders empty state when selected chat has no messages', () => {
     chatUIState.selectedChatId = 'chat-1';
-    useQueryMock.mockReturnValue({ data: { items: [] }, isLoading: false, isError: false });
+    useQueryMock.mockReturnValue({ data: { data: [] }, isLoading: false, isError: false });
 
     render(<MessageListContainer />);
 
@@ -135,7 +135,7 @@ describe('MessageListContainer', () => {
     chatUIState.selectedChatId = 'chat-1';
     useQueryMock.mockReturnValue({
       data: {
-        items: [
+        data: [
           {
             id: 'm-failed',
             chatId: 'chat-1',

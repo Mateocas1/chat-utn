@@ -32,7 +32,7 @@ describe('ChatThreadContainer', () => {
   });
 
   it('renders empty prompt when no chat is selected', () => {
-    useQueryMock.mockReturnValue({ data: { items: [] } });
+    useQueryMock.mockReturnValue({ data: [] });
 
     render(<ChatThreadContainer />);
 
@@ -42,22 +42,20 @@ describe('ChatThreadContainer', () => {
   it('adapts selected chat into ChatThreadHeader content', () => {
     chatUIState.selectedChatId = 'chat-2';
     useQueryMock.mockReturnValue({
-      data: {
-        items: [
-          {
-            id: 'chat-1',
-            title: 'Infra',
-            participantCount: 2,
-            updatedAt: '2026-04-30T12:00:00.000Z'
-          },
-          {
-            id: 'chat-2',
-            title: 'Producto',
-            participantCount: 4,
-            updatedAt: '2026-04-30T12:03:00.000Z'
-          }
-        ]
-      }
+      data: [
+        {
+          id: 'chat-1',
+          title: 'Infra',
+          participantCount: 2,
+          updatedAt: '2026-04-30T12:00:00.000Z'
+        },
+        {
+          id: 'chat-2',
+          title: 'Producto',
+          participantCount: 4,
+          updatedAt: '2026-04-30T12:03:00.000Z'
+        }
+      ]
     });
 
     render(<ChatThreadContainer />);
@@ -70,9 +68,7 @@ describe('ChatThreadContainer', () => {
     chatUIState.selectedChatId = 'chat-1';
     chatUIState.socketStatus = 'connected';
     useQueryMock.mockReturnValue({
-      data: {
-        items: [{ id: 'chat-1', title: 'Infra', participantCount: 2, updatedAt: '2026-04-30T12:00:00.000Z' }]
-      }
+      data: [{ id: 'chat-1', title: 'Infra', participantCount: 2, updatedAt: '2026-04-30T12:00:00.000Z' }]
     });
 
     render(<ChatThreadContainer />);
@@ -84,9 +80,7 @@ describe('ChatThreadContainer', () => {
     chatUIState.selectedChatId = 'chat-1';
     chatUIState.socketStatus = 'disconnected';
     useQueryMock.mockReturnValue({
-      data: {
-        items: [{ id: 'chat-1', title: 'Infra', participantCount: 2, updatedAt: '2026-04-30T12:00:00.000Z' }]
-      }
+      data: [{ id: 'chat-1', title: 'Infra', participantCount: 2, updatedAt: '2026-04-30T12:00:00.000Z' }]
     });
 
     const { rerender } = render(<ChatThreadContainer />);

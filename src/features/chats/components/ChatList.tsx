@@ -71,12 +71,7 @@ export const ChatList = ({ chats = [], onSelectChat, selectedChatId }: ChatListP
   };
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden border-border bg-panel md:border-r">
-      <header className="border-border border-b px-4 py-3">
-        <h2 className="text-sm font-semibold text-text">
-        Mis Chats
-        </h2>
-      </header>
+    <>
       {chats.length === 0 ? (
         <div className="px-4 py-6 text-center text-sm text-muted">No hay chats disponibles</div>
       ) : (
@@ -94,6 +89,6 @@ export const ChatList = ({ chats = [], onSelectChat, selectedChatId }: ChatListP
           ))}
         </ul>
       )}
-    </section>
+    </>
   );
 };
