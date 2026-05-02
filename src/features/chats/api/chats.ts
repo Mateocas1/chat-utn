@@ -8,6 +8,7 @@ type ApiEnvelope<T> = {
 export type ChatPreviewResponseItem = {
   id: string;
   title?: string;
+  participantCount?: number;
   unreadCount?: number;
   updatedAt?: string;
   lastMessage?: {
