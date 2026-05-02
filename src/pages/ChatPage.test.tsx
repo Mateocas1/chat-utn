@@ -86,7 +86,7 @@ describe('ChatPage', () => {
     expect(screen.getByText('ChatThreadContainer')).toBeInTheDocument();
     expect(screen.getByText('MessageListContainer:u-1')).toBeInTheDocument();
     expect(screen.getByText('MessageComposerContainer')).toBeInTheDocument();
-    expect(screen.getByText('NotificationSettingsContainer')).toBeInTheDocument();
+    expect(screen.queryByText('NotificationSettingsContainer')).not.toBeInTheDocument();
     expect(screen.getByText('NotificationTrayContainer')).toBeInTheDocument();
   });
 

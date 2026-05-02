@@ -8,6 +8,8 @@ const useQueryClientMock = vi.fn();
 const getChatsMock = vi.fn();
 const createChatMock = vi.fn();
 const useUsersMock = vi.fn();
+const useAuthStoreMock = vi.fn();
+const authStoreGetStateMock = vi.fn();
 const setSelectedChatIdMock = vi.fn();
 const invalidateQueriesMock = vi.fn();
 
@@ -38,6 +40,13 @@ vi.mock('@/features/users/hooks/useUsers', () => ({
   useUsers: () => useUsersMock()
 }));
 
+vi.mock('@/features/auth/store/authStore', () => ({
+  default: Object.assign(
+    (selector: (state: { user: { id: string } | null }) => unknown) => useAuthStoreMock(selector),
+    { getState: () => authStoreGetStateMock() }
+  )
+}));
+
 vi.mock('@/features/chat/store/chatUIStore', () => ({
   useChatUIStore: (selector: (state: ChatUIState) => unknown) => selector(chatUIState)
 }));
@@ -54,8 +63,15 @@ describe('ChatListContainer', () => {
     getChatsMock.mockReset();
     createChatMock.mockReset();
     useUsersMock.mockReset();
+    useAuthStoreMock.mockReset();
+    authStoreGetStateMock.mockReset();
     useQueryMock.mockReset();
     useMutationMock.mockReset();
+
+    useAuthStoreMock.mockImplementation((selector: (state: { user: { id: string } | null }) => unknown) =>
+      selector({ user: { id: 'u-auth' } })
+    );
+    authStoreGetStateMock.mockReturnValue({ user: { id: 'u-auth' } });
 
     useUsersMock.mockReturnValue({
       data: { items: [] },
@@ -244,6 +260,203 @@ describe('ChatListContainer', () => {
 
     expect(screen.getByRole('button', { name: 'Mica' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lauti' })).toBeInTheDocument();
+  });
+
+  it('excludes authenticated user from Nuevo chat list', () => {
+    useQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
+    useUsersMock.mockReturnValue({
+      data: {
+        items: [
+          { id: 'u-auth', displayName: 'Yo' },
+          { id: 'u-2', displayName: 'Lauti' }
+        ]
+      },
+      isLoading: false,
+      isError: false
+    });
+
+    render(<ChatListContainer />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo chat' }));
+
+    expect(screen.queryByRole('button', { name: 'Yo' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lauti' })).toBeInTheDocument();
+  });
+
+  it('blocks self-selection in handler, shows accessible error, and does not call createChat mutation', () => {
+    useAuthStoreMock.mockImplementation((selector: (state: { user: { id: string } | null }) => unknown) =>
+      selector({ user: null })
+    );
+    authStoreGetStateMock.mockReturnValue({ user: { id: 'u-auth' } });
+
+    const mutateCreateChatMock = vi.fn((userId: string) => {
+      if (mutationOptions?.mutationFn) {
+        void mutationOptions.mutationFn(userId).catch(() => undefined);
+      }
+    });
+    let mutationOptions: {
+      mutationFn?: (userId: string) => Promise<unknown>;
+    } | null = null;
+
+    useMutationMock.mockImplementation((options: { mutationFn?: (userId: string) => Promise<unknown> }) => {
+      mutationOptions = options;
+      return {
+        mutate: mutateCreateChatMock,
+        isPending: false
+      };
+    });
+
+    useQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
+    useUsersMock.mockReturnValue({
+      data: {
+        items: [{ id: 'u-auth', displayName: 'Yo' }]
+      },
+      isLoading: false,
+      isError: false
+    });
+
+    render(<ChatListContainer />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo chat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Yo' }));
+
+    expect(mutateCreateChatMock).toHaveBeenCalledWith('u-auth');
+    expect(createChatMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('No podés crear un chat con vos mismo.');
+  });
+
+  it('disables only the selected user while create chat is pending', () => {
+    let mutationOptions: {
+      mutationFn?: (userId: string) => Promise<unknown>;
+    } | null = null;
+
+    const mutateCreateChatMock = vi.fn((userId: string) => {
+      const mutationResult = mutationOptions?.mutationFn?.(userId);
+      if (mutationResult instanceof Promise) {
+        void mutationResult.catch(() => undefined);
+      }
+    });
+
+    useMutationMock.mockImplementation((options: { mutationFn?: (userId: string) => Promise<unknown> }) => {
+      mutationOptions = options;
+      return {
+        mutate: mutateCreateChatMock,
+        isPending: true
+      };
+    });
+
+    useQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
+    useUsersMock.mockReturnValue({
+      data: {
+        items: [
+          { id: 'u-1', displayName: 'Mica' },
+          { id: 'u-2', displayName: 'Lauti' }
+        ]
+      },
+      isLoading: false,
+      isError: false
+    });
+
+    render(<ChatListContainer />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo chat' }));
+
+    const micaButton = screen.getByRole('button', { name: 'Mica' });
+    const lautiButton = screen.getByRole('button', { name: 'Lauti' });
+
+    expect(micaButton).not.toBeDisabled();
+    expect(lautiButton).not.toBeDisabled();
+
+    fireEvent.click(micaButton);
+
+    expect(micaButton).toBeDisabled();
+    expect(micaButton).toHaveTextContent('Creando chat…');
+    expect(lautiButton).not.toBeDisabled();
+  });
+
+  it('shows mutation failure error and restores user interactivity', async () => {
+    let mutationOptions: {
+      onError?: () => void;
+      mutationFn?: (userId: string) => Promise<unknown>;
+    } | null = null;
+
+    const mutateCreateChatMock = vi.fn((userId: string) => {
+      const mutationResult = mutationOptions?.mutationFn?.(userId);
+      if (mutationResult instanceof Promise) {
+        void mutationResult.catch(() => undefined);
+      }
+      mutationOptions?.onError?.();
+    });
+
+    useMutationMock.mockImplementation((options: {
+      onError?: () => void;
+      mutationFn?: (userId: string) => Promise<unknown>;
+    }) => {
+      mutationOptions = options;
+      return {
+        mutate: mutateCreateChatMock,
+        isPending: false
+      };
+    });
+
+    useQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
+    useUsersMock.mockReturnValue({
+      data: {
+        items: [{ id: 'u-1', displayName: 'Mica' }]
+      },
+      isLoading: false,
+      isError: false
+    });
+
+    render(<ChatListContainer />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo chat' }));
+    const micaButton = screen.getByRole('button', { name: 'Mica' });
+
+    fireEvent.click(micaButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('No pudimos crear el chat. Probá de nuevo.');
+    });
+    expect(micaButton).not.toBeDisabled();
+    expect(micaButton).toHaveTextContent('Mica');
+  });
+
+  it('renders eligible users empty state when only authenticated user exists', () => {
+    useQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
+    useUsersMock.mockReturnValue({
+      data: {
+        items: [{ id: 'u-auth', displayName: 'Yo' }]
+      },
+      isLoading: false,
+      isError: false
+    });
+
+    render(<ChatListContainer />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo chat' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('No hay usuarios disponibles para crear un chat.');
+    expect(screen.queryByRole('button', { name: 'Yo' })).not.toBeInTheDocument();
+  });
+
+  it('retries users fetch from dialog error state', () => {
+    const usersRefetchMock = vi.fn();
+
+    useQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
+    useUsersMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch: usersRefetchMock
+    });
+
+    render(<ChatListContainer />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nuevo chat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar usuarios' }));
+
+    expect(usersRefetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('creates chat on user selection and selects created chat', () => {

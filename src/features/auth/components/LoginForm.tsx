@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import type { AxiosError } from 'axios';
 import { login } from '../api/auth';
 import useAuthStore from '../store/authStore';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 
 type ErrorResponse = {
   message?: string;
@@ -36,35 +38,38 @@ export const LoginForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error && <div className="text-red-500 text-sm">{error}</div>}
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Email</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border"
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Contraseña</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm p-2 border"
-          required
-        />
-      </div>
-      <button
-        type="submit"
+    <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading ? 'true' : 'false'} noValidate>
+      <p className="text-sm text-[--color-muted]">Completá tus credenciales para continuar.</p>
+      {error ? (
+        <div role="alert" className="rounded-[--radius-sm] border border-[--color-danger] bg-[--color-surface] p-3 text-sm text-[--color-danger]">
+          {error}
+        </div>
+      ) : null}
+      <Input
+        id="login-email"
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        autoComplete="email"
+        required
         disabled={loading}
-        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-      >
-        {loading ? 'Cargando...' : 'Iniciar Sesión'}
-      </button>
+        aria-invalid={error ? 'true' : undefined}
+      />
+      <Input
+        id="login-password"
+        label="Contraseña"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        autoComplete="current-password"
+        required
+        disabled={loading}
+        aria-invalid={error ? 'true' : undefined}
+      />
+      <Button type="submit" variant="accent" disabled={loading} className="w-full">
+        {loading ? 'Ingresando...' : 'Iniciar sesión'}
+      </Button>
     </form>
   );
 };

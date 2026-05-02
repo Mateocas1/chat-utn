@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatThreadContainer } from './ChatThreadContainer';
 
@@ -20,6 +20,10 @@ vi.mock('@tanstack/react-query', () => ({
 
 vi.mock('@/features/chat/store/chatUIStore', () => ({
   useChatUIStore: (selector: (state: ChatUIState) => unknown) => selector(chatUIState)
+}));
+
+vi.mock('@/features/chats/containers/NotificationSettingsContainer', () => ({
+  NotificationSettingsContainer: () => <div>NotificationSettingsContainer</div>
 }));
 
 describe('ChatThreadContainer', () => {
@@ -91,5 +95,38 @@ describe('ChatThreadContainer', () => {
     rerender(<ChatThreadContainer />);
 
     expect(screen.queryByLabelText('Estado de presencia')).toBeNull();
+  });
+
+  it('renders accessible notification settings trigger in header actions', () => {
+    chatUIState.selectedChatId = 'chat-1';
+    useQueryMock.mockReturnValue({
+      data: [{ id: 'chat-1', title: 'Infra', participantCount: 2, updatedAt: '2026-04-30T12:00:00.000Z' }]
+    });
+
+    render(<ChatThreadContainer />);
+
+    expect(screen.getByRole('button', { name: 'Ajustes de notificaciones' })).toBeInTheDocument();
+  });
+
+  it('opens notification settings dialog and closes with escape', () => {
+    chatUIState.selectedChatId = 'chat-1';
+    useQueryMock.mockReturnValue({
+      data: [{ id: 'chat-1', title: 'Infra', participantCount: 2, updatedAt: '2026-04-30T12:00:00.000Z' }]
+    });
+
+    render(<ChatThreadContainer />);
+
+    const trigger = screen.getByRole('button', { name: 'Ajustes de notificaciones' });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole('dialog', { name: 'Ajustes de notificaciones' });
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByText('NotificationSettingsContainer')).toBeInTheDocument();
+
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    expect(screen.queryByRole('dialog', { name: 'Ajustes de notificaciones' })).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(trigger);
   });
 });

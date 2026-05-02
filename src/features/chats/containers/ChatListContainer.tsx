@@ -9,6 +9,7 @@ import { useUsers } from '@/features/users/hooks/useUsers';
 import { ChatListEmpty } from '@/features/chats/components/ChatListEmpty';
 import { ChatListError } from '@/features/chats/components/ChatListError';
 import { ChatListSkeleton } from '@/features/chats/components/ChatListSkeleton';
+import useAuthStore from '@/features/auth/store/authStore';
 
 const formatMetadata = (updatedAt?: string): string | undefined => {
   if (!updatedAt) {
@@ -43,10 +44,13 @@ const toChatListItems = (
 
 export function ChatListContainer() {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [createChatError, setCreateChatError] = useState<string | null>(null);
   const newChatTriggerRef = useRef<HTMLButtonElement | null>(null);
   const selectedChatId = useChatUIStore((state) => state.selectedChatId);
   const setSelectedChatId = useChatUIStore((state) => state.setSelectedChatId);
   const typingByChatId = useChatUIStore((state) => state.typingByChatId);
+  const currentUserId = useAuthStore((state) => state.user?.id ?? null);
   const usersQuery = useUsers();
   const queryClient = useQueryClient();
 
@@ -56,20 +60,42 @@ export function ChatListContainer() {
   });
 
   const createChatMutation = useMutation({
-    mutationFn: (userId: string) => createChat(userId),
+    mutationFn: (userId: string) => {
+      const latestCurrentUserId = useAuthStore.getState().user?.id ?? null;
+
+      if (userId === latestCurrentUserId) {
+        setCreateChatError('No podés crear un chat con vos mismo.');
+        return Promise.reject(new Error('self-chat-blocked'));
+      }
+
+      return createChat(userId);
+    },
     onSuccess: (createdChat: { id?: string }) => {
       if (createdChat.id) {
         setSelectedChatId(createdChat.id);
       }
       void queryClient.invalidateQueries({ queryKey: ['chats'] });
+      setPendingUserId(null);
       setIsCreatingChat(false);
+    },
+    onError: () => {
+      setCreateChatError('No pudimos crear el chat. Probá de nuevo.');
+      setPendingUserId(null);
     }
   });
 
   const chats = toChatListItems(data, typingByChatId);
   const users = usersQuery.data?.items ?? [];
+  const eligibleUsers = users.filter((user) => user.id !== currentUserId);
 
   const handleUserSelection = (userId: string) => {
+    if (userId === currentUserId) {
+      setCreateChatError('No podés crear un chat con vos mismo.');
+      return;
+    }
+
+    setCreateChatError(null);
+    setPendingUserId(userId);
     createChatMutation.mutate(userId);
   };
 
@@ -94,18 +120,45 @@ export function ChatListContainer() {
         triggerRef={newChatTriggerRef}
       >
         {usersQuery.isLoading ? <p className="text-xs text-muted">Cargando usuarios…</p> : null}
-        {usersQuery.isError ? <p className="text-xs text-danger">No pudimos cargar usuarios</p> : null}
-        {!usersQuery.isLoading && !usersQuery.isError ? (
+        {usersQuery.isError ? (
+          <div className="space-y-2">
+            <p className="text-xs text-danger" role="alert">
+              No pudimos cargar usuarios
+            </p>
+            {typeof usersQuery.refetch === 'function' ? (
+              <button
+                type="button"
+                className="rounded-[--radius-sm] border border-border px-2 py-1 text-xs text-text hover:bg-surface-2"
+                onClick={() => {
+                  void usersQuery.refetch();
+                }}
+              >
+                Reintentar usuarios
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {createChatError ? (
+          <p className="text-xs text-danger" role="alert">
+            {createChatError}
+          </p>
+        ) : null}
+        {!usersQuery.isLoading && !usersQuery.isError && eligibleUsers.length === 0 ? (
+          <p className="text-xs text-muted" role="status">
+            No hay usuarios disponibles para crear un chat.
+          </p>
+        ) : null}
+        {!usersQuery.isLoading && !usersQuery.isError && eligibleUsers.length > 0 ? (
           <ul className="space-y-1" role="list">
-            {users.map((user) => (
+            {eligibleUsers.map((user) => (
               <li key={user.id}>
                 <button
                   type="button"
                   className="w-full rounded-[--radius-sm] px-2 py-1 text-left text-sm text-text hover:bg-surface-2"
                   onClick={() => handleUserSelection(user.id)}
-                  disabled={createChatMutation.isPending}
+                  disabled={createChatMutation.isPending && pendingUserId === user.id}
                 >
-                  {user.displayName}
+                  {createChatMutation.isPending && pendingUserId === user.id ? 'Creando chat…' : user.displayName}
                 </button>
               </li>
             ))}

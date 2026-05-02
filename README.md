@@ -71,3 +71,21 @@ export default defineConfig([
   },
 ])
 ```
+
+## Quality Gates
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+npm run e2e
+```
+
+## E2E Environment Variables
+
+- `PLAYWRIGHT_BASE_URL` (default: `http://localhost:5173`)
+- `E2E_EMAIL` and `E2E_PASSWORD` (required for authenticated smoke)
+- `E2E_RUN_REGISTER=1` to enable live register smoke using unique generated email
+- `E2E_RUN_CREATE_CHAT=1` + `E2E_SECONDARY_DISPLAY_NAME` to enable create-chat smoke
+- `E2E_RUN_NOTIFICATION_SETTINGS=1` + `E2E_CHAT_TITLE` to enable notification-settings smoke

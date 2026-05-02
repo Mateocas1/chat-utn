@@ -2,7 +2,6 @@ import { ChatLayout } from '@/components/layout/ChatLayout';
 import { ChatListContainer } from '@/features/chats/containers/ChatListContainer';
 import { ChatThreadContainer } from '@/features/chats/containers/ChatThreadContainer';
 import { NotificationTrayContainer } from '@/features/chats/containers/NotificationTrayContainer';
-import { NotificationSettingsContainer } from '@/features/chats/containers/NotificationSettingsContainer';
 import { MessageListContainer } from '@/features/messages/containers/MessageListContainer';
 import { MessageComposerContainer } from '@/features/messages/containers/MessageComposerContainer';
 import { TypingIndicator } from '@/features/messages/components/TypingIndicator';
@@ -54,7 +53,6 @@ export const ChatPage = () => {
   const main = (
     <section className="flex h-full min-h-0 flex-col">
       <ChatThreadContainer />
-      <NotificationSettingsContainer />
       <NotificationTrayContainer />
       <MessageListContainer currentUserId={user?.id} />
       <TypingIndicator isVisible={typists.length > 0} typists={typists} />
